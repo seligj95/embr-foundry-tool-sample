@@ -70,10 +70,10 @@ gh repo create embr-foundry-tool-sample --source=. --public --push
 embr quickstart deploy <your-user>/embr-foundry-tool-sample -i <installation-id>
 ```
 
-Grab the public URL from `embr deployments list`. For the rest of the guide, assume it's:
+Grab the public URL from `embr deployments list`. For this deployment it's:
 
 ```
-https://embr-foundry-tool-sample.<your-stamp>.embr.azure.net
+https://production-embr-foundry-tool-sample-5ad18952.app.embr.azure
 ```
 
 ---
@@ -98,7 +98,7 @@ https://embr-foundry-tool-sample.<your-stamp>.embr.azure.net
 2. Give it a name (e.g., `embr_tools_openapi`).
 3. Paste the URL of your spec:
    ```
-   https://embr-foundry-tool-sample.<your-stamp>.embr.azure.net/openapi.json
+   https://production-embr-foundry-tool-sample-5ad18952.app.embr.azure/openapi.json
    ```
 4. **Authentication**: Foundry **does not allow anonymous** OpenAPI tools. Pick **API key** (or any option) and fill in dummy values — the server ignores the key unless you set `TOOL_API_KEY` via `embr variables set`. This is one of the platform gaps we're documenting.
 5. Save.
@@ -108,8 +108,9 @@ https://embr-foundry-tool-sample.<your-stamp>.embr.azure.net
 1. Back in the project, open **Connected resources → + New connection → Custom keys → MCP server**.
 2. Server label: `embr_tools_mcp`. Server URL:
    ```
-   https://embr-foundry-tool-sample.<your-stamp>.embr.azure.net/mcp
+   https://production-embr-foundry-tool-sample-5ad18952.app.embr.azure/mcp/
    ```
+   (trailing slash matters — the app mounts MCP at `/mcp` and FastMCP's streamable-HTTP handler is at `/`)
 3. Auth: `None` (v1) — or set a bearer token if you've locked it down later.
 4. Save the connection. Then on the agent page, **+ Add → MCP server** → pick the connection.
 
@@ -142,4 +143,5 @@ In the agent playground:
 - **Unauthenticated in v1.** Both surfaces are wide-open by default. `TOOL_API_KEY` can gate `/api/*` with a header check, but that's all.
 - **Foundry refuses anonymous OpenAPI tools** — you're forced to declare an auth scheme in the spec even if the backend ignores it. Candidate Embr platform feature: auto-generate a throwaway API key on `embr.yaml: expose_as: tool` so this isn't a manual step.
 - **MCP mount path quirk.** `FastMCP.streamable_http_app()` mounts its own `/mcp` sub-route by default, so without `streamable_http_path="/"` you'd end up serving at `/mcp/mcp`. Worth documenting.
+- **FastMCP DNS-rebinding protection** rejects requests with HTTP 421 `Invalid Host header` when deployed behind any proxy — because its `host` param defaults to `127.0.0.1`, which auto-enables a localhost-only allow-list (see `mcp/server/fastmcp/server.py:178-181`). Fix: pass `host="0.0.0.0"` to `FastMCP(...)`. This sample already does this; flagging it for anyone copying the pattern.
 - **No rate limiting.** A real tool service needs per-tenant throttling.

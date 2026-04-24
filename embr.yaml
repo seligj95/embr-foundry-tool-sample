@@ -4,7 +4,7 @@ autoDeploy: true
 
 run:
   port: 8000
-  startCommand: "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  startCommand: "/output/pythonenv3.12/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
 healthCheck:
   enabled: true

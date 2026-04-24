@@ -122,6 +122,22 @@ async def time_route(timezone: str = "UTC") -> TimeResponse:
 
 
 # ----- MCP surface -----------------------------------------------------------
-# Mount the MCP streamable-HTTP app at /mcp. Foundry (or any MCP client) can
-# connect to https://<host>/mcp as a remote MCP server.
+# Mount the MCP streamable-HTTP app at /mcp/. Foundry (or any MCP client) can
+# connect to https://<host>/mcp/ as a remote MCP server.
+#
+# NOTE: Starlette Mount returns a 307 for the no-trailing-slash form (/mcp →
+# /mcp/) built from the request Host header. Behind Embr's ingress the Host
+# header on the upstream hop is the *internal* dev-compute hostname, so
+# clients that follow the redirect end up hitting an unreachable URL. To
+# accommodate clients that omit the trailing slash (VS Code's MCP client,
+# common curl invocations) we add a small ASGI middleware that rewrites
+# /mcp → /mcp/ in-process before Starlette sees it.
 app.mount("/mcp", mcp.streamable_http_app())
+
+
+@app.middleware("http")
+async def _mcp_trailing_slash(request, call_next):
+    if request.url.path == "/mcp":
+        request.scope["path"] = "/mcp/"
+        request.scope["raw_path"] = b"/mcp/"
+    return await call_next(request)

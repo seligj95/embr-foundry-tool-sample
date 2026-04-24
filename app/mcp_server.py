@@ -13,6 +13,7 @@ from . import tools
 
 mcp = FastMCP(
     "Embr Tool Sample",
+    host="0.0.0.0",
     json_response=True,
     stateless_http=True,
     streamable_http_path="/",
